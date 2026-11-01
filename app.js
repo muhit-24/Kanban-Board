@@ -13,9 +13,13 @@ let draggedTaskId = null;
 let toastTimer;
 let selectMode = false;
 const selectedTaskIds = new Set();
+let previewTaskId = null;
+let returnToPreviewTaskId = null;
+let modalFormSnapshot = null;
 
 const boardColumns = document.querySelector("#boardColumns");
 const modal = document.querySelector("#taskModal");
+const previewModal = document.querySelector("#previewModal");
 const form = document.querySelector("#taskForm");
 const moreButton = document.querySelector("#moreButton");
 const profileMenu = document.querySelector("#profileMenu");
@@ -130,6 +134,9 @@ function taskCard(task) {
           <button class="task-action delete-task" type="button" aria-label="Delete ${escapeHtml(task.title)}">×</button>
         </div>
       </div>
+      <button class="task-preview-button" type="button" aria-label="Preview ${escapeHtml(task.title)}">
+        <span>View details</span><span aria-hidden="true">↗</span>
+      </button>
     </div>`;
 }
 
@@ -146,6 +153,13 @@ function bindBoardEvents() {
     });
     card.querySelector(".edit-task").addEventListener("click", () => openModal(card.dataset.taskId));
     card.querySelector(".delete-task").addEventListener("click", () => deleteTask(card.dataset.taskId));
+    const previewButton = card.querySelector(".task-preview-button");
+    previewButton.addEventListener("mousedown", (event) => event.stopPropagation());
+    previewButton.addEventListener("dragstart", (event) => event.preventDefault());
+    previewButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openPreview(card.dataset.taskId);
+    });
     const checkbox = card.querySelector(".task-checkbox");
     if (checkbox) {
       checkbox.addEventListener("click", (event) => event.stopPropagation());
@@ -200,15 +214,57 @@ function openModal(taskId = null) {
   document.querySelector("#taskTitle").value = task?.title || "";
   document.querySelector("#taskDescription").value = task?.description || "";
   document.querySelector(`input[name="priority"][value="${task?.priority || "medium"}"]`).checked = true;
+  modalFormSnapshot = getModalFormValues();
   modal.hidden = false;
   document.body.style.overflow = "hidden";
   document.querySelector("#taskTitle").focus();
 }
 
+function openPreview(taskId) {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task) return;
+  previewTaskId = taskId;
+  const statusLabel = columns.find((column) => column.id === task.status)?.label || task.status;
+  document.querySelector("#previewTitle").textContent = task.title;
+  document.querySelector("#previewPriority").textContent = task.priority;
+  document.querySelector("#previewPriority").className = `preview-priority ${task.priority}`;
+  document.querySelector("#previewStatus").textContent = statusLabel;
+  document.querySelector("#previewDescription").textContent = task.description || "No description added for this task.";
+  document.querySelector("#previewDate").textContent = task.status === "done" ? "Completed today" : "Added today";
+  previewModal.hidden = false;
+  document.querySelector("#closePreview").focus();
+}
+
+function closePreview() {
+  previewModal.hidden = true;
+  previewTaskId = null;
+}
+
+function getModalFormValues() {
+  return {
+    title: document.querySelector("#taskTitle").value,
+    description: document.querySelector("#taskDescription").value,
+    priority: document.querySelector('input[name="priority"]:checked')?.value || "medium"
+  };
+}
+
+function isModalFormDirty() {
+  return JSON.stringify(getModalFormValues()) !== JSON.stringify(modalFormSnapshot);
+}
+
+function requestCloseModal() {
+  if (isModalFormDirty() && !window.confirm("You have unsaved changes. Discard them?")) return;
+  closeModal();
+}
+
 function closeModal() {
+  const taskIdToPreview = returnToPreviewTaskId;
+  returnToPreviewTaskId = null;
+  modalFormSnapshot = null;
   modal.hidden = true;
   form.reset();
   document.body.style.overflow = "";
+  if (taskIdToPreview) openPreview(taskIdToPreview);
 }
 
 function deleteTask(taskId) {
@@ -290,15 +346,27 @@ form.addEventListener("submit", (event) => {
   }
   saveTasks();
   render();
+  modalFormSnapshot = null;
   closeModal();
 });
 
 document.querySelector("#addTaskButton").addEventListener("click", () => openModal());
 document.querySelector("#boardAddTaskButton").addEventListener("click", () => openModal());
-document.querySelector("#closeModal").addEventListener("click", closeModal);
-document.querySelector("#cancelModal").addEventListener("click", closeModal);
-modal.addEventListener("click", (event) => { if (event.target === modal) closeModal(); });
-document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !modal.hidden) closeModal(); });
+document.querySelector("#closeModal").addEventListener("click", requestCloseModal);
+document.querySelector("#cancelModal").addEventListener("click", requestCloseModal);
+modal.addEventListener("click", (event) => event.stopPropagation());
+document.querySelector("#closePreview").addEventListener("click", closePreview);
+previewModal.addEventListener("click", (event) => { if (event.target === previewModal) closePreview(); });
+document.querySelector("#previewEdit").addEventListener("click", () => {
+  const taskId = previewTaskId;
+  returnToPreviewTaskId = taskId;
+  closePreview();
+  if (taskId) openModal(taskId);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !modal.hidden) requestCloseModal();
+  if (event.key === "Escape" && !previewModal.hidden) closePreview();
+});
 document.querySelector("#filterButton").addEventListener("click", () => {
   const options = ["all", "high", "medium", "low"];
   activeFilter = options[(options.indexOf(activeFilter) + 1) % options.length];
