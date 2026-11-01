@@ -75,7 +75,9 @@ function setGreeting() {
   const hour = new Date().getHours();
   document.querySelector("#greeting").textContent =
     hour < 12 ? "GOOD MORNING" : hour < 18 ? "GOOD AFTERNOON" : "GOOD EVENING";
-  document.querySelector("#headerDate").textContent = formatHeaderDate();
+  document.querySelectorAll("[data-header-date]").forEach((dateElement) => {
+    dateElement.textContent = formatHeaderDate();
+  });
 }
 
 function escapeHtml(value = "") {

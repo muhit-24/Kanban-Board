@@ -329,6 +329,12 @@ button {
   align-items: center;
   gap: 22px;
 }
+.sidebar > .topbar-actions {
+  display: none;
+}
+.desktop-topbar-actions {
+  margin-left: auto;
+}
 .date-pill {
   color: #737d78;
   font-size: 12px;
@@ -1203,6 +1209,13 @@ button {
   .sidebar {
     width: 190px;
   }
+  .sidebar > .topbar-actions {
+    display: flex;
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    gap: 13px;
+  }
   .main-content {
     padding: 0 28px 45px;
   }
@@ -1220,8 +1233,10 @@ button {
     overflow: visible;
   }
   .sidebar {
+    position: relative;
     width: 100%;
     height: auto;
+    min-height: 60px;
     padding: 14px 18px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
@@ -1231,15 +1246,12 @@ button {
   }
   .brand {
     margin: 0;
+    flex-shrink: 0;
   }
   .side-nav {
-    margin-left: auto;
-    display: flex;
+    display: none;
   }
-  .nav-item {
-    padding: 9px;
-  }
-  .nav-item span:last-child, .sidebar-bottom {
+  .sidebar-bottom {
     display: none;
   }
   .main-content {
@@ -1248,13 +1260,13 @@ button {
     padding: 0 17px 35px;
   }
   .topbar {
-    height: 65px;
+    height: 0;
+    border-bottom: 0;
   }
   .breadcrumb {
     display: none;
   }
   .topbar-actions {
-    margin-left: auto;
     gap: 13px;
   }
   .date-pill {
