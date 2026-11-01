@@ -17,7 +17,7 @@
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#" aria-label="Kengo home">
-        <span class="brand-mark">K</span>
+        <img class="brand-mark" src="Logo.png" alt="Kengo logo">
         <span class="brand-name">kengo</span>
       </a>
       <div class="topbar-actions">
@@ -25,7 +25,34 @@
         <button class="icon-button" type="button" aria-label="Notifications">
           <span class="bell-icon"></span><span class="notification-dot"></span>
         </button>
-        <button class="avatar small-avatar" type="button" aria-label="Open profile">ME</button>
+        <div class="mobile-profile-wrap">
+          <button class="avatar small-avatar" id="mobileProfileButton" type="button" aria-label="Open profile menu" aria-expanded="false" aria-controls="mobileProfileMenu">ME</button>
+          <div class="mobile-profile-menu" id="mobileProfileMenu" hidden>
+            <button class="mobile-profile-option" type="button" data-mobile-action="profile">
+              <span class="mobile-option-icon">◎</span>
+              <span>Profile</span>
+            </button>
+            <div class="mobile-appearance">
+              <button class="mobile-profile-option" id="mobileAppearanceButton" type="button" aria-expanded="false" aria-controls="mobileThemeOptions">
+                <span class="mobile-option-icon">☼</span>
+                <span>Appearance</span>
+                <span class="mobile-option-chevron">›</span>
+              </button>
+              <div class="mobile-theme-options" id="mobileThemeOptions" hidden>
+                <button class="mobile-theme-option theme-option" type="button" data-theme-choice="light">
+                  <span>Light</span><span class="theme-check" aria-hidden="true">✓</span>
+                </button>
+                <button class="mobile-theme-option theme-option" type="button" data-theme-choice="dark">
+                  <span>Dark</span><span class="theme-check" aria-hidden="true">✓</span>
+                </button>
+              </div>
+            </div>
+            <button class="mobile-profile-option" type="button" data-mobile-action="settings">
+              <span class="mobile-option-icon">⚙</span>
+              <span>Settings</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <nav class="side-nav" aria-label="Main navigation">

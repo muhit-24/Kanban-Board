@@ -30,6 +30,10 @@ const cancelDeleteButton = document.querySelector("#cancelDeleteButton");
 const selectedTaskCount = document.querySelector("#selectedTaskCount");
 const boardMenuButton = document.querySelector("#boardMenuButton");
 const boardMenu = document.querySelector("#boardMenu");
+const mobileProfileButton = document.querySelector("#mobileProfileButton");
+const mobileProfileMenu = document.querySelector("#mobileProfileMenu");
+const mobileAppearanceButton = document.querySelector("#mobileAppearanceButton");
+const mobileThemeOptions = document.querySelector("#mobileThemeOptions");
 
 function loadTasks() {
   try {
@@ -65,6 +69,16 @@ function toggleBoardMenu(force) {
   const shouldOpen = typeof force === "boolean" ? force : boardMenu.hidden;
   boardMenu.hidden = !shouldOpen;
   boardMenuButton.setAttribute("aria-expanded", shouldOpen);
+}
+
+function toggleMobileProfileMenu(force) {
+  const shouldOpen = typeof force === "boolean" ? force : mobileProfileMenu.hidden;
+  mobileProfileMenu.hidden = !shouldOpen;
+  mobileProfileButton.setAttribute("aria-expanded", shouldOpen);
+  if (!shouldOpen) {
+    mobileThemeOptions.hidden = true;
+    mobileAppearanceButton.setAttribute("aria-expanded", "false");
+  }
 }
 
 function formatHeaderDate() {
@@ -397,17 +411,34 @@ moreButton.addEventListener("click", () => toggleProfileMenu());
 document.querySelectorAll(".theme-option").forEach((option) => {
   option.addEventListener("click", () => {
     setTheme(option.dataset.themeChoice);
+    mobileThemeOptions.hidden = true;
+    mobileAppearanceButton.setAttribute("aria-expanded", "false");
     toggleProfileMenu(false);
+    toggleMobileProfileMenu(false);
     showToast(`${option.dataset.themeChoice === "dark" ? "Dark" : "Light"} theme enabled`);
+  });
+});
+mobileProfileButton.addEventListener("click", () => toggleMobileProfileMenu());
+mobileAppearanceButton.addEventListener("click", () => {
+  const shouldOpen = mobileThemeOptions.hidden;
+  mobileThemeOptions.hidden = !shouldOpen;
+  mobileAppearanceButton.setAttribute("aria-expanded", shouldOpen);
+});
+document.querySelectorAll("[data-mobile-action]").forEach((option) => {
+  option.addEventListener("click", () => {
+    toggleMobileProfileMenu(false);
+    showToast(`${option.dataset.mobileAction === "profile" ? "Profile" : "Settings"} is ready for a future update`);
   });
 });
 document.addEventListener("click", (event) => {
   if (!profileMenu.hidden && !profileMenu.parentElement.contains(event.target)) toggleProfileMenu(false);
   if (!boardMenu.hidden && !boardMenu.parentElement.contains(event.target)) toggleBoardMenu(false);
+  if (!mobileProfileMenu.hidden && !mobileProfileMenu.parentElement.contains(event.target)) toggleMobileProfileMenu(false);
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") toggleProfileMenu(false);
   if (event.key === "Escape") toggleBoardMenu(false);
+  if (event.key === "Escape") toggleMobileProfileMenu(false);
 });
 
 setTheme(localStorage.getItem(THEME_STORAGE_KEY) || "light");
