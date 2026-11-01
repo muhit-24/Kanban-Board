@@ -1,4 +1,5 @@
 const STORAGE_KEY = "kengo-tasks-v1";
+const THEME_STORAGE_KEY = "kengo-theme";
 const columns = [
   { id: "todo", label: "To do", className: "todo", empty: "Your next step starts here." },
   { id: "doing", label: "Doing", className: "doing", empty: "Nothing in progress yet." },
@@ -7,12 +8,24 @@ const columns = [
 
 let tasks = loadTasks();
 let activeFilter = "all";
+let sortMode = "last-added";
 let draggedTaskId = null;
 let toastTimer;
+let selectMode = false;
+const selectedTaskIds = new Set();
 
 const boardColumns = document.querySelector("#boardColumns");
 const modal = document.querySelector("#taskModal");
 const form = document.querySelector("#taskForm");
+const moreButton = document.querySelector("#moreButton");
+const profileMenu = document.querySelector("#profileMenu");
+const deleteModeButton = document.querySelector("#deleteModeButton");
+const bulkDeleteButton = document.querySelector("#bulkDeleteButton");
+const selectAllButton = document.querySelector("#selectAllButton");
+const cancelDeleteButton = document.querySelector("#cancelDeleteButton");
+const selectedTaskCount = document.querySelector("#selectedTaskCount");
+const boardMenuButton = document.querySelector("#boardMenuButton");
+const boardMenu = document.querySelector("#boardMenu");
 
 function loadTasks() {
   try {
@@ -25,6 +38,29 @@ function loadTasks() {
 
 function saveTasks() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function setTheme(theme) {
+  const selectedTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = selectedTheme;
+  localStorage.setItem(THEME_STORAGE_KEY, selectedTheme);
+  document.querySelectorAll(".theme-option").forEach((option) => {
+    const isSelected = option.dataset.themeChoice === selectedTheme;
+    option.classList.toggle("selected", isSelected);
+    option.setAttribute("aria-checked", isSelected);
+  });
+}
+
+function toggleProfileMenu(force) {
+  const shouldOpen = typeof force === "boolean" ? force : profileMenu.hidden;
+  profileMenu.hidden = !shouldOpen;
+  moreButton.setAttribute("aria-expanded", shouldOpen);
+}
+
+function toggleBoardMenu(force) {
+  const shouldOpen = typeof force === "boolean" ? force : boardMenu.hidden;
+  boardMenu.hidden = !shouldOpen;
+  boardMenuButton.setAttribute("aria-expanded", shouldOpen);
 }
 
 function formatHeaderDate() {
@@ -45,7 +81,7 @@ function escapeHtml(value = "") {
 function render() {
   const visibleTasks = activeFilter === "all" ? tasks : tasks.filter((task) => task.priority === activeFilter);
   boardColumns.innerHTML = columns.map((column) => {
-    const columnTasks = visibleTasks.filter((task) => task.status === column.id);
+    const columnTasks = sortTasks(visibleTasks.filter((task) => task.status === column.id));
     return `
       <article class="column ${column.className}" data-status="${column.id}">
         <div class="column-header">
@@ -61,9 +97,27 @@ function render() {
   updateSummary();
 }
 
+function sortTasks(columnTasks) {
+  if (sortMode === "priority-desc" || sortMode === "priority-asc") {
+    const priorityOrder = { high: 3, medium: 2, low: 1 };
+    const direction = sortMode === "priority-desc" ? -1 : 1;
+    return [...columnTasks].sort((a, b) => direction * (priorityOrder[a.priority] - priorityOrder[b.priority]));
+  }
+  return columnTasks;
+}
+
+function updateSortControls() {
+  document.querySelectorAll(".sort-option").forEach((option) => {
+    const isSelected = option.dataset.sortMode === sortMode;
+    option.classList.toggle("selected", isSelected);
+    option.setAttribute("aria-checked", isSelected);
+  });
+}
+
 function taskCard(task) {
   return `
     <div class="task-card" draggable="true" data-task-id="${task.id}" tabindex="0">
+      ${selectMode ? `<label class="task-select"><input type="checkbox" class="task-checkbox" aria-label="Select ${escapeHtml(task.title)}" ${selectedTaskIds.has(task.id) ? "checked" : ""}><span></span></label>` : ""}
       <div class="task-top">
         <h3 class="task-title">${escapeHtml(task.title)}</h3>
         <span class="priority ${task.priority}">${task.priority}</span>
@@ -92,6 +146,15 @@ function bindBoardEvents() {
     });
     card.querySelector(".edit-task").addEventListener("click", () => openModal(card.dataset.taskId));
     card.querySelector(".delete-task").addEventListener("click", () => deleteTask(card.dataset.taskId));
+    const checkbox = card.querySelector(".task-checkbox");
+    if (checkbox) {
+      checkbox.addEventListener("click", (event) => event.stopPropagation());
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) selectedTaskIds.add(card.dataset.taskId);
+        else selectedTaskIds.delete(card.dataset.taskId);
+        updateDeleteControls();
+      });
+    }
   });
   document.querySelectorAll(".column").forEach((column) => {
     column.addEventListener("dragover", (event) => {
@@ -157,6 +220,51 @@ function deleteTask(taskId) {
   showToast("Task deleted");
 }
 
+function updateDeleteControls() {
+  const count = selectedTaskIds.size;
+  selectedTaskCount.textContent = count;
+  bulkDeleteButton.hidden = !selectMode;
+  selectAllButton.hidden = !selectMode;
+  cancelDeleteButton.hidden = !selectMode;
+  deleteModeButton.hidden = selectMode;
+  bulkDeleteButton.disabled = count === 0;
+  const allTasksSelected = tasks.length > 0 && count === tasks.length;
+  selectAllButton.textContent = allTasksSelected ? "Deselect all" : "Select all";
+  selectAllButton.setAttribute("aria-label", allTasksSelected ? "Deselect all tasks" : "Select all tasks");
+  bulkDeleteButton.setAttribute("aria-label", `Delete ${count} selected tasks`);
+}
+
+function setSelectMode(enabled) {
+  selectMode = enabled;
+  selectedTaskIds.clear();
+  render();
+  updateDeleteControls();
+}
+
+function deleteSelectedTasks() {
+  const count = selectedTaskIds.size;
+  if (!count) {
+    showToast("Select at least one task");
+    return;
+  }
+  const warning = `Delete ${count} selected task${count === 1 ? "" : "s"}? This action cannot be undone.`;
+  if (!window.confirm(warning)) return;
+  tasks = tasks.filter((task) => !selectedTaskIds.has(task.id));
+  saveTasks();
+  setSelectMode(false);
+  showToast(`${count} task${count === 1 ? "" : "s"} deleted`);
+}
+
+function toggleSelectAll() {
+  if (selectedTaskIds.size === tasks.length) {
+    selectedTaskIds.clear();
+  } else {
+    tasks.forEach((task) => selectedTaskIds.add(task.id));
+  }
+  render();
+  updateDeleteControls();
+}
+
 function showToast(message) {
   const toast = document.querySelector("#toast");
   toast.textContent = message;
@@ -186,6 +294,7 @@ form.addEventListener("submit", (event) => {
 });
 
 document.querySelector("#addTaskButton").addEventListener("click", () => openModal());
+document.querySelector("#boardAddTaskButton").addEventListener("click", () => openModal());
 document.querySelector("#closeModal").addEventListener("click", closeModal);
 document.querySelector("#cancelModal").addEventListener("click", closeModal);
 modal.addEventListener("click", (event) => { if (event.target === modal) closeModal(); });
@@ -196,6 +305,42 @@ document.querySelector("#filterButton").addEventListener("click", () => {
   document.querySelector("#filterCount").textContent = activeFilter === "all" ? "All" : activeFilter[0].toUpperCase() + activeFilter.slice(1);
   render();
 });
+document.querySelectorAll(".sort-option").forEach((option) => {
+  option.addEventListener("click", () => {
+    sortMode = option.dataset.sortMode;
+    updateSortControls();
+    render();
+    toggleBoardMenu(false);
+    showToast(`Sorted: ${option.textContent.trim()}`);
+  });
+});
+deleteModeButton.addEventListener("click", () => {
+  setSelectMode(true);
+  toggleBoardMenu(false);
+});
+cancelDeleteButton.addEventListener("click", () => setSelectMode(false));
+bulkDeleteButton.addEventListener("click", deleteSelectedTasks);
+selectAllButton.addEventListener("click", toggleSelectAll);
+boardMenuButton.addEventListener("click", () => toggleBoardMenu());
 
+moreButton.addEventListener("click", () => toggleProfileMenu());
+document.querySelectorAll(".theme-option").forEach((option) => {
+  option.addEventListener("click", () => {
+    setTheme(option.dataset.themeChoice);
+    toggleProfileMenu(false);
+    showToast(`${option.dataset.themeChoice === "dark" ? "Dark" : "Light"} theme enabled`);
+  });
+});
+document.addEventListener("click", (event) => {
+  if (!profileMenu.hidden && !profileMenu.parentElement.contains(event.target)) toggleProfileMenu(false);
+  if (!boardMenu.hidden && !boardMenu.parentElement.contains(event.target)) toggleBoardMenu(false);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") toggleProfileMenu(false);
+  if (event.key === "Escape") toggleBoardMenu(false);
+});
+
+setTheme(localStorage.getItem(THEME_STORAGE_KEY) || "light");
+updateSortControls();
 setGreeting();
 render();

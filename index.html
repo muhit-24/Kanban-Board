@@ -9,6 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    document.documentElement.dataset.theme = localStorage.getItem("kengo-theme") === "dark" ? "dark" : "light";
+  </script>
 </head>
 <body>
   <div class="app-shell">
@@ -40,7 +43,22 @@
             <strong>My workspace</strong>
             <span>Personal planner</span>
           </div>
-          <button class="more-btn" type="button" aria-label="More options">•••</button>
+          <div class="profile-menu-wrap">
+            <button class="more-btn" id="moreButton" type="button" aria-label="More options" aria-expanded="false" aria-controls="profileMenu">•••</button>
+            <div class="profile-menu" id="profileMenu" hidden>
+              <p class="menu-label">Appearance</p>
+              <button class="theme-option" type="button" data-theme-choice="light">
+                <span class="theme-option-icon">☼</span>
+                <span>Light</span>
+                <span class="theme-check" aria-hidden="true">✓</span>
+              </button>
+              <button class="theme-option" type="button" data-theme-choice="dark">
+                <span class="theme-option-icon">☾</span>
+                <span>Dark</span>
+                <span class="theme-check" aria-hidden="true">✓</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
@@ -98,7 +116,53 @@
             <p>Drag tasks across to update your progress.</p>
           </div>
           <div class="board-tools">
-            <button class="filter-button" id="filterButton" type="button"><span class="filter-icon">≡</span> Filter <span class="filter-count" id="filterCount">All</span></button>
+            <button class="primary-button board-add-button" id="boardAddTaskButton" type="button" aria-label="Add a task">
+              <span class="plus-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="board-menu-wrap">
+              <button class="filter-button board-menu-button" id="boardMenuButton" type="button" aria-label="Board options" aria-expanded="false" aria-controls="boardMenu">
+                <span class="menu-lines" aria-hidden="true">☰</span>
+              </button>
+              <div class="board-menu" id="boardMenu" hidden>
+                <button class="board-menu-option" id="filterButton" type="button">
+                  <span class="filter-icon" aria-hidden="true">≡</span>
+                  <span>Filter</span>
+                  <span class="filter-count" id="filterCount">All</span>
+                </button>
+                <button class="board-menu-option" id="deleteModeButton" type="button">
+                  <span class="delete-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path d="M5 7h14M10 4h4l1 3H9l1-3Zm-3 3 1 13h8l1-13M10 11v6m4-6v6" />
+                    </svg>
+                  </span>
+                  <span>Delete</span>
+                </button>
+                <div class="board-menu-divider"></div>
+                <p class="board-menu-label">Sort tasks</p>
+                <button class="board-menu-option sort-option" type="button" data-sort-mode="priority-desc">
+                  <span class="sort-option-icon">↓</span>
+                  <span>High to Low</span>
+                  <span class="sort-check" aria-hidden="true">✓</span>
+                </button>
+                <button class="board-menu-option sort-option" type="button" data-sort-mode="priority-asc">
+                  <span class="sort-option-icon">↑</span>
+                  <span>Low to High</span>
+                  <span class="sort-check" aria-hidden="true">✓</span>
+                </button>
+                <button class="board-menu-option sort-option" type="button" data-sort-mode="last-added">
+                  <span class="sort-option-icon">◷</span>
+                  <span>Last added</span>
+                  <span class="sort-check" aria-hidden="true">✓</span>
+                </button>
+              </div>
+            </div>
+            <button class="filter-button bulk-delete-button" id="bulkDeleteButton" type="button" hidden>
+              Delete selected <span id="selectedTaskCount">0</span>
+            </button>
+            <button class="filter-button select-all-button" id="selectAllButton" type="button" hidden>
+              Select all
+            </button>
+            <button class="filter-button cancel-delete-button" id="cancelDeleteButton" type="button" hidden>Cancel</button>
           </div>
         </div>
         <div class="board" id="boardColumns"></div>
