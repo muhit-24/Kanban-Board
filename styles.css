@@ -863,6 +863,51 @@ button {
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
+  cursor: pointer;
+}
+.task-top:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.task-move-options {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  width: max-content;
+  max-width: min(220px, calc(100vw - 16px));
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  box-shadow: 0 10px 24px rgba(20, 35, 25, .18);
+}
+.task-move-options[hidden] {
+  display: none;
+}
+.task-move-options > span {
+  width: 100%;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+.task-move-options button {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 10px;
+}
+.task-move-options button:hover {
+  border-color: var(--accent-dark);
+  color: var(--accent-dark);
 }
 .task-title {
   margin: 0;
@@ -1026,6 +1071,15 @@ button {
   justify-content: space-between;
   gap: 16px;
 }
+.preview-top-area {
+  cursor: pointer;
+  border-radius: 9px;
+  padding: 2px;
+}
+.preview-top-area:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
 .preview-heading-main {
   display: flex;
   align-items: center;
@@ -1087,6 +1141,41 @@ button {
   padding: 5px 10px;
   color: var(--muted);
   font-size: 11px;
+}
+.preview-move-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 13px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  cursor: default;
+}
+.preview-move-options[hidden] {
+  display: none;
+}
+.preview-move-options > span {
+  width: 100%;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+}
+.preview-move-options button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 9px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 11px;
+}
+.preview-move-options button:hover {
+  border-color: var(--accent-dark);
+  color: var(--accent-dark);
 }
 .preview-detail {
   border-top: 1px solid var(--line);

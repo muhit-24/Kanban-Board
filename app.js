@@ -34,6 +34,8 @@ const mobileProfileButton = document.querySelector("#mobileProfileButton");
 const mobileProfileMenu = document.querySelector("#mobileProfileMenu");
 const mobileAppearanceButton = document.querySelector("#mobileAppearanceButton");
 const mobileThemeOptions = document.querySelector("#mobileThemeOptions");
+const previewTopArea = document.querySelector("#previewTopArea");
+const previewMoveOptions = document.querySelector("#previewMoveOptions");
 
 function loadTasks() {
   try {
@@ -123,7 +125,13 @@ function sortTasks(columnTasks) {
     const direction = sortMode === "priority-desc" ? -1 : 1;
     return [...columnTasks].sort((a, b) => direction * (priorityOrder[a.priority] - priorityOrder[b.priority]));
   }
-  return columnTasks;
+  return columnTasks
+    .map((task, index) => ({ task, index }))
+    .sort((a, b) => {
+      const activityDifference = (b.task.lastActivityAt || 0) - (a.task.lastActivityAt || 0);
+      return activityDifference || a.index - b.index;
+    })
+    .map(({ task }) => task);
 }
 
 function updateSortControls() {
@@ -142,6 +150,12 @@ function taskCard(task) {
         <h3 class="task-title">${escapeHtml(task.title)}</h3>
         <span class="priority ${task.priority}">${task.priority}</span>
       </div>
+      <div class="task-move-options" hidden>
+        <span>Move to</span>
+        ${task.status !== "todo" ? '<button type="button" data-task-status="todo">To do</button>' : ""}
+        ${task.status !== "doing" ? '<button type="button" data-task-status="doing">Doing</button>' : ""}
+        ${task.status !== "done" ? '<button type="button" data-task-status="done">Done</button>' : ""}
+      </div>
       ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ""}
       <div class="task-footer">
         <span class="task-date">${task.status === "done" ? "Completed today" : "Added today"}</span>
@@ -156,8 +170,60 @@ function taskCard(task) {
     </div>`;
 }
 
+function toggleTaskMoveOptions(options, anchor, event) {
+  if (!options.hidden) {
+    closeTaskMoveOptions(options);
+    return;
+  }
+  document.querySelectorAll(".task-move-options:not([hidden])").forEach((openOptions) => {
+    closeTaskMoveOptions(openOptions);
+  });
+  options.hidden = false;
+  options.taskCard = anchor.closest(".task-card");
+  document.body.append(options);
+  const anchorRect = anchor.getBoundingClientRect();
+  const optionsRect = options.getBoundingClientRect();
+  const gap = 8;
+  const preferredTop = event instanceof KeyboardEvent
+    ? anchorRect.bottom + gap
+    : event.clientY + gap;
+  const preferredLeft = event instanceof KeyboardEvent
+    ? anchorRect.left
+    : event.clientX;
+  const top = Math.min(preferredTop, window.innerHeight - optionsRect.height - gap);
+  const left = Math.min(preferredLeft, window.innerWidth - optionsRect.width - gap);
+  options.style.top = `${Math.max(gap, top)}px`;
+  options.style.left = `${Math.max(gap, left)}px`;
+}
+
+function closeTaskMoveOptions(options) {
+  options.hidden = true;
+  if (options.taskCard) options.taskCard.append(options);
+  options.style.removeProperty("top");
+  options.style.removeProperty("left");
+}
+
 function bindBoardEvents() {
   document.querySelectorAll(".task-card").forEach((card) => {
+    const taskTop = card.querySelector(".task-top");
+    const taskMoveOptions = card.querySelector(".task-move-options");
+    taskTop.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleTaskMoveOptions(taskMoveOptions, taskTop, event);
+    });
+    taskTop.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleTaskMoveOptions(taskMoveOptions, taskTop, event);
+      }
+    });
+    taskTop.setAttribute("tabindex", "0");
+    taskMoveOptions.querySelectorAll("[data-task-status]").forEach((option) => {
+      option.addEventListener("click", (event) => {
+        event.stopPropagation();
+        moveTask(card.dataset.taskId, option.dataset.taskStatus);
+      });
+    });
     card.addEventListener("dragstart", () => {
       draggedTaskId = card.dataset.taskId;
       card.classList.add("dragging");
@@ -185,6 +251,7 @@ function bindBoardEvents() {
         updateDeleteControls();
       });
     }
+
   });
   document.querySelectorAll(".column").forEach((column) => {
     column.addEventListener("dragover", (event) => {
@@ -199,10 +266,7 @@ function bindBoardEvents() {
       if (!draggedTaskId) return;
       const task = tasks.find((item) => item.id === draggedTaskId);
       if (task && task.status !== column.dataset.status) {
-        task.status = column.dataset.status;
-        saveTasks();
-        render();
-        showToast(`Moved to ${columns.find((item) => item.id === task.status).label}`);
+        moveTask(task.id, column.dataset.status);
       }
     });
   });
@@ -247,6 +311,10 @@ function openPreview(taskId) {
   document.querySelector("#previewStatus").textContent = statusLabel;
   document.querySelector("#previewDescription").textContent = task.description || "No description added for this task.";
   document.querySelector("#previewDate").textContent = task.status === "done" ? "Completed today" : "Added today";
+  previewMoveOptions.hidden = true;
+  previewMoveOptions.querySelectorAll("[data-preview-status]").forEach((option) => {
+    option.hidden = option.dataset.previewStatus === task.status;
+  });
   previewModal.hidden = false;
   document.querySelector("#closePreview").focus();
 }
@@ -254,6 +322,26 @@ function openPreview(taskId) {
 function closePreview() {
   previewModal.hidden = true;
   previewTaskId = null;
+}
+
+function togglePreviewMoveOptions() {
+  previewMoveOptions.hidden = !previewMoveOptions.hidden;
+}
+
+function movePreviewTask(status) {
+  moveTask(previewTaskId, status, true);
+}
+
+function moveTask(taskId, status, keepPreview = false) {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task || task.status === status) return;
+  document.querySelectorAll(".task-move-options:not([hidden])").forEach(closeTaskMoveOptions);
+  task.status = status;
+  task.lastActivityAt = Date.now();
+  saveTasks();
+  render();
+  if (keepPreview) openPreview(task.id);
+  showToast(`Moved to ${columns.find((column) => column.id === status).label}`);
 }
 
 function getModalFormValues() {
@@ -357,7 +445,14 @@ form.addEventListener("submit", (event) => {
     Object.assign(task, { title, description, priority });
     showToast("Task updated");
   } else {
-    tasks.unshift({ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, title, description, priority, status: "todo" });
+    tasks.unshift({
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      title,
+      description,
+      priority,
+      status: "todo",
+      lastActivityAt: Date.now()
+    });
     showToast("Task added");
   }
   saveTasks();
@@ -373,6 +468,21 @@ document.querySelector("#cancelModal").addEventListener("click", requestCloseMod
 modal.addEventListener("click", (event) => event.stopPropagation());
 document.querySelector("#closePreview").addEventListener("click", closePreview);
 previewModal.addEventListener("click", (event) => { if (event.target === previewModal) closePreview(); });
+previewTopArea.addEventListener("click", (event) => {
+  if (!event.target.closest("#closePreview") && !event.target.closest("[data-preview-status]")) togglePreviewMoveOptions();
+});
+previewTopArea.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    togglePreviewMoveOptions();
+  }
+});
+document.querySelectorAll("[data-preview-status]").forEach((option) => {
+  option.addEventListener("click", (event) => {
+    event.stopPropagation();
+    movePreviewTask(option.dataset.previewStatus);
+  });
+});
 document.querySelector("#previewEdit").addEventListener("click", () => {
   const taskId = previewTaskId;
   returnToPreviewTaskId = taskId;
@@ -431,6 +541,9 @@ document.querySelectorAll("[data-mobile-action]").forEach((option) => {
   });
 });
 document.addEventListener("click", (event) => {
+  if (!event.target.closest(".task-move-options")) {
+    document.querySelectorAll(".task-move-options:not([hidden])").forEach(closeTaskMoveOptions);
+  }
   if (!profileMenu.hidden && !profileMenu.parentElement.contains(event.target)) toggleProfileMenu(false);
   if (!boardMenu.hidden && !boardMenu.parentElement.contains(event.target)) toggleBoardMenu(false);
   if (!mobileProfileMenu.hidden && !mobileProfileMenu.parentElement.contains(event.target)) toggleMobileProfileMenu(false);
@@ -439,6 +552,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") toggleProfileMenu(false);
   if (event.key === "Escape") toggleBoardMenu(false);
   if (event.key === "Escape") toggleMobileProfileMenu(false);
+  if (event.key === "Escape") document.querySelectorAll(".task-move-options:not([hidden])").forEach(closeTaskMoveOptions);
 });
 
 setTheme(localStorage.getItem(THEME_STORAGE_KEY) || "light");

@@ -232,15 +232,23 @@
 
   <div class="modal-backdrop" id="previewModal" hidden>
     <section class="preview-modal" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
-      <div class="preview-heading">
-        <div class="preview-heading-main">
-          <p class="eyebrow">TASK PREVIEW</p>
-          <span class="preview-priority" id="previewPriority"></span>
+      <div class="preview-top-area" id="previewTopArea" tabindex="0" aria-label="Show move options">
+        <div class="preview-heading">
+          <div class="preview-heading-main">
+            <p class="eyebrow">TASK PREVIEW</p>
+            <span class="preview-priority" id="previewPriority"></span>
+          </div>
+          <button class="modal-close" id="closePreview" type="button" aria-label="Close task preview">×</button>
         </div>
-        <button class="modal-close" id="closePreview" type="button" aria-label="Close task preview">×</button>
+        <h2 id="previewTitle">Task title</h2>
+        <div class="preview-status" id="previewStatus"></div>
+        <div class="preview-move-options" id="previewMoveOptions" hidden>
+          <span>Move to</span>
+          <button type="button" data-preview-status="todo">To do</button>
+          <button type="button" data-preview-status="doing">Doing</button>
+          <button type="button" data-preview-status="done">Done</button>
+        </div>
       </div>
-      <h2 id="previewTitle">Task title</h2>
-      <div class="preview-status" id="previewStatus"></div>
       <div class="preview-detail">
         <span>Description</span>
         <p id="previewDescription"></p>
