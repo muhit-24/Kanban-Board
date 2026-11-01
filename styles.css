@@ -957,6 +957,7 @@ button {
   place-items: center;
   padding: 20px;
   z-index: 5;
+  overflow: auto;
 }
 .modal-backdrop[hidden] {
   display: none;
@@ -971,6 +972,8 @@ button {
 }
 .preview-modal {
   width: min(100%, 540px);
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
   position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1063,6 +1066,17 @@ button {
   color: var(--ink);
   font-size: 15px;
   line-height: 1.6;
+}
+.preview-detail #previewDescription {
+  max-height: 190px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
 }
 .preview-edit-button {
   margin-top: 28px;
